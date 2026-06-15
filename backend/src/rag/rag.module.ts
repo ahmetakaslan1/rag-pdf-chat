@@ -1,0 +1,15 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { RagService } from './rag.service';
+import { DocumentChunk } from './entities/document-chunk.entity';
+import { GeminiModule } from '../gemini/gemini.module';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([DocumentChunk]),
+    GeminiModule,
+  ],
+  providers: [RagService],
+  exports: [RagService],
+})
+export class RagModule {}
