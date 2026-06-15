@@ -58,6 +58,59 @@ Yüklenen PDF'ler otomatik olarak ayrıştırılır, anlamlı parçalara bölün
 
 ---
 
+## 🗺️ Sistem Mimarisi — Servis Akış Şemaları
+
+### 📤 PDF Yükleme & İşleme Akışı
+
+```mermaid
+flowchart TD
+    A([👤 Kullanıcı]) -->|PDF seçer / sürükler| B[React SPA\nFileUpload Bileşeni]
+    B -->|POST /api/documents/upload\nmultipart/form-data| C[NestJS API\nDocumentsController]
+
+    C -->|MIME + boyut doğrulama\nIDOR koruması| D{Geçerli mi?}
+    D -->|❌ Hayır| E[❌ Hata Yanıtı\n400 / 403]
+    D -->|✅ Evet| F[💾 Dosyayı Diske / S3'e Kaydet\nStorageService]
+
+    F -->|İş kuyruğa eklendi| G[(Redis\nBullMQ Queue)]
+    G -->|Worker tetiklendi| H[⚙️ DocumentProcessor\nBullMQ Worker]
+
+    H -->|pdf-parse ile metin çıkar\nnull-byte temizle| I[📄 Metin Ayrıştırma]
+    I -->|Parçalara böl| J[✂️ Chunking\nRagService]
+    J -->|Her chunk için API çağrısı| K[🤖 Google Gemini\nEmbedding API]
+    K -->|768 boyutlu vektör| L[(PostgreSQL\n+ pgvector\nDocumentChunk tablosu)]
+
+    H -->|%10 → %30 → %60 → %100| M[📡 Socket.io\nWebSocket Gateway]
+    M -->|document-progress event| B
+```
+
+---
+
+### 💬 RAG Sohbet Akışı
+
+```mermaid
+flowchart TD
+    A([👤 Kullanıcı]) -->|Mesaj yazar & gönderir| B[React SPA\nMessageInput]
+    B -->|POST /api/chat/sessions/:id/messages| C[NestJS API\nChatController]
+
+    C -->|JWT Guard + IDOR kontrolü| D{Yetki?}
+    D -->|❌| E[❌ 401 / 403]
+    D -->|✅| F[💬 ChatService\nmessage kaydet]
+
+    F -->|Kullanıcı sorusunu gönd| G[🤖 Google Gemini\nEmbedding API]
+    G -->|Soru vektörü 768 boyut| H[(PostgreSQL\n+ pgvector)]
+
+    H -->|cosine similarity\nTOP 5 chunk| I[📑 En Alakalı\nMetin Parçaları]
+    I -->|Bağlam birleştir| J[🤖 Google Gemini\nChat API\ngemini-2.5-flash]
+
+    J -->|AI yanıtı| K[💾 Yanıtı DB'ye kaydet\nAI mesajı]
+    K -->|Socket event: new-message| L[📡 Socket.io\nWebSocket Gateway]
+    L -->|Gerçek zamanlı iletim| B
+    B -->|Markdown render| M([👤 Kullanıcı görür])
+```
+
+---
+
+## 🏗️ Klasör Yapısı
 
 ```
 Multi_rag_nest_next/
