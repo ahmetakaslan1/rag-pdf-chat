@@ -71,12 +71,14 @@ export const RAGProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setProcessingFiles((prev) => {
         const next = { ...prev };
         delete next[tempId];
-        next[docId] = {
-          id: docId,
-          name: file.name,
-          status: 'parsing',
-          percent: 10,
-        };
+        if (!next[docId] || (next[docId].status !== 'failed' && next[docId].status !== 'completed')) {
+          next[docId] = {
+            id: docId,
+            name: file.name,
+            status: 'parsing',
+            percent: 10,
+          };
+        }
         return next;
       });
     } catch (err: any) {

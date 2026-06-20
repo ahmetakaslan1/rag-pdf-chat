@@ -30,7 +30,9 @@ export class DocumentsService {
 
     const pdfHeader = file.buffer.subarray(0, 5).toString('ascii');
     if (pdfHeader !== '%PDF-') {
-      throw new BadRequestException('Geçersiz dosya formatı. Dosya gerçek bir PDF olmalıdır.');
+      throw new BadRequestException(
+        'Geçersiz dosya formatı. Dosya gerçek bir PDF olmalıdır.',
+      );
     }
   }
 
