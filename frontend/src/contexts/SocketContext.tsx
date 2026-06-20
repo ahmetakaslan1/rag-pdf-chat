@@ -17,7 +17,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const guestId = useGuestId();
 
   useEffect(() => {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:3000/events';
+    const wsUrl = import.meta.env.VITE_WS_URL;
+    
+    if (!wsUrl) return;
+
     const socketInstance = io(wsUrl, {
       withCredentials: true,
       autoConnect: false,
@@ -43,14 +46,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const targetRoom = isAuthenticated ? user?.id : guestId;
 
+    const joinRoom = () => {
+      if (targetRoom) {
+        socket.emit('join-room', targetRoom);
+      }
+    };
+
     if (targetRoom) {
       if (!socket.connected) {
         socket.connect();
+      } else {
+        joinRoom();
       }
-      socket.emit('join-room', targetRoom);
     }
 
+    socket.on('connect', joinRoom);
+
     return () => {
+      socket.off('connect', joinRoom);
       if (socket.connected && targetRoom) {
         socket.emit('leave-room', targetRoom);
       }

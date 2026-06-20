@@ -1,18 +1,16 @@
 version: '3.8'
 
 services:
-  postgres:
+  postgres-db:
     image: pgvector/pgvector:0.8.0-pg17
     container_name: rag_postgres_prod
     restart: unless-stopped
     env_file:
-      - .env.production
+      - ./backend/.env.production
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - '${DB_PORT}:5432'
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,12 +19,10 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
+  redis-cache:
     image: redis:7-alpine
     container_name: rag_redis_prod
     restart: unless-stopped
-    ports:
-      - '${REDIS_PORT}:6379'
     volumes:
       - redis_prod_data:/data
     healthcheck:
@@ -41,18 +37,24 @@ services:
     container_name: rag_backend_prod
     restart: unless-stopped
     env_file:
-      - .env.production 
+      - ./backend/.env.production 
+    environment:
+      - DB_HOST=postgres-db
+      - REDIS_HOST=redis-cache
     ports:
       - "3000:3000"
     depends_on:
-      postgres:
+      postgres-db:
         condition: service_healthy
-      redis:
+      redis-cache:
         condition: service_healthy
 
   frontend:
     build: 
       context: ./frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL:-https://api.senindomainin.com/api}
+        - VITE_WS_URL=${VITE_WS_URL:-https://api.senindomainin.com/events}
     container_name: rag_frontend_prod
     restart: unless-stopped
     ports:

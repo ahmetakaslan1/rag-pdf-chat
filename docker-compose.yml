@@ -1,10 +1,10 @@
 services:
-  postgres:
+  postgres-db:
     image: pgvector/pgvector:0.8.0-pg17
-    container_name: rag_postgres
+    container_name: rag_postgres_dev
     restart: unless-stopped
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
@@ -19,9 +19,9 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
+  redis-cache:
     image: redis:7-alpine
-    container_name: rag_redis
+    container_name: rag_redis_dev
     restart: unless-stopped
     ports:
       - '${REDIS_PORT}:6379'
@@ -32,6 +32,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build: 
+      context: ./backend
+    container_name: rag_backend_dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=postgres-db
+      - REDIS_HOST=redis-cache
+      - FRONTEND_URL=http://localhost:5173
+      - LOCAL_BASE_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
 
 volumes:
   postgres_data:
