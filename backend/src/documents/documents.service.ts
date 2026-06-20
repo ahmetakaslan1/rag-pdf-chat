@@ -52,10 +52,7 @@ export class DocumentsService {
       'process-document',
       {
         documentId: saved.id,
-        filePath: storageUrl.replace(
-          /^https?:\/\/[^/]+\/uploads\//,
-          './uploads/',
-        ),
+        filePath: `./uploads/${storageUrl.split('/').pop()}`,
         room,
       },
       { jobId: saved.id },
